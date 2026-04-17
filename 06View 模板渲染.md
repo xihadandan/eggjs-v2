@@ -1,0 +1,1 @@
+### 框架内置了 egg-view 作为模板解决方案，支持多模板渲染。每个模板引擎均以<span style="color:red">插件</span>方式引入

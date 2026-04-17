@@ -1,6 +1,31 @@
-# eggjs的启动过程
+# 运行debug命令
 
-## egg-bin debug --port=7001 都发生了什么
+### 文字描述运行过程
+- 继承关系
+```javascript
+/*
+
+继承关系
+EggBin --> Command --> CommonBin(npm包common-bin)
+
+DebugCommand --> DevCommand --> Command --> CommonBin(common-bin)
+
+*/
+```
+- egg-bin debug --port=7001
+- EggBin实例化
+- EggBin构造方法中加载所有egg-bin\lib\cmd目录下所有命令，并添加到COMMANDS中
+- EggBin实例调用自身的start方法，在 CommonBin类中有声明start方法
+- CommonBin类中的start方法调用DISPATCH 方法
+- 第一次进入DISPATCH 方法（EggBin实例的）实例化debu命令（DebugCommand)
+- DevCommand类中 设置子进程要运行的模块 this.serverBin = path.join(__dirname, '../start-cluster')
+- 第一次进入DISPATCH 方法（EggBin实例的）调用debug命令实例的DISPATCH
+- 第二次进入DISPATCH 方法（debug命令实例的），并调用debug命令实例的 run方法
+- run方法中格式化参数（调用DevCommand类中的 formatArgs）
+- formatArgs中得到framework 调用 argv.framework = utils.getFrameworkPath （ utils.getFrameworkPath在egg-utils\lib\framework.js中）
+- run方法中 fork子进程来启动集群  const child = cp.fork(this.serverBin, eggArgs, options);
+
+### egg-bin debug --port=7001 都发生了什么
 - egg-bin 是个node可执行的命令
 - 在egg-bin包中 package.json
 ```javascript
@@ -102,30 +127,6 @@ class CommonBin {
 
 
 ```
-### 文字描述
-- 继承关系
-```javascript
-/*
-
-继承关系
-EggBin --> Command --> CommonBin(npm包common-bin)
-
-DebugCommand --> DevCommand --> Command --> CommonBin(common-bin)
-
-*/
-```
-- EggBin实例化
-- EggBin构造方法中加载所有egg-bin\lib\cmd目录下所有命令，并添加到COMMANDS中
-- EggBin实例调用自身的start方法，在 CommonBin类中有声明start方法
-- CommonBin类中的start方法调用DISPATCH 方法
-- 第一次进入DISPATCH 方法（EggBin实例的）实例化debu命令（DebugCommand)
-- DevCommand类中 设置子进程要运行的模块 this.serverBin = path.join(__dirname, '../start-cluster')
-- 第一次进入DISPATCH 方法（EggBin实例的）调用debug命令实例的DISPATCH
-- 第二次进入DISPATCH 方法（debug命令实例的），并调用debug命令实例的 run方法
-- run方法中格式化参数（调用DevCommand类中的 formatArgs）
-- formatArgs中得到framework 调用 argv.framework = utils.getFrameworkPath （ utils.getFrameworkPath在egg-utils\lib\framework.js中）
-- run方法中 fork子进程  const child = cp.fork(this.serverBin, eggArgs, options);
-
 
 ### debug命令会使用 child_process 模块来创建（fork）子进程 start-cluster.js
 - 自动建立 IPC 通道‌：父进程与子进程可通过 send() 和 message 事件双向通信
@@ -202,35 +203,5 @@ function getFrameworkPath({ framework, baseDir }) {
 
 ```
 
-### 启动集群
-- egg-bin\lib\start-cluster
-```javascript
-#!/usr/bin/env node
-
-'use strict';
-
-const debug = require('debug')('egg-bin:start-cluster');
-const options = JSON.parse(process.argv[2]);
-debug('start cluster options: %j', options);
-require(options.framework).startCluster(options); // 调用 egg-cluster\index.js中 startCluster 方法
-
-```
-### 集群启动流程
-- egg-cluster\index.js
-```javascript
-const Master = require('./lib/master');
-/**
- * cluster start flow:
- *
- * [startCluster] -> master -> agent_worker -> new [Agent]       -> agentWorkerLoader
- *                         `-> app_worker   -> new [Application] -> appWorkerLoader
- *
- */
-exports.startCluster = function(options, callback) {
-  new Master(options).ready(callback); // 实例化
-};
-
-
-```
 
 
